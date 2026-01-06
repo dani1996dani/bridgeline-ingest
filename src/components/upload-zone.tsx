@@ -1,77 +1,77 @@
-'use client'
+'use client';
 
-import { useState, useCallback } from 'react'
-import { extractProposal } from '@/actions/extract-proposal'
-import { toast } from 'sonner'
-import { Upload, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { useState, useCallback } from 'react';
+import { extractProposal } from '@/actions/extract-proposal';
+import { toast } from 'sonner';
+import { Upload, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 export function UploadZone() {
-  const [isDragging, setIsDragging] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const processFiles = async (files: File[]) => {
+    setIsUploading(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    // Process one by one for now (or Promise.all)
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const toastId = toast.loading(`Processing ${file.name}...`);
+
+      try {
+        const result = await extractProposal(formData);
+        if (result.success) {
+          if (result.isDuplicate) {
+            toast.success(`Duplicate: ${file.name}`, { id: toastId });
+          } else {
+            toast.success(`Extracted: ${file.name}`, { id: toastId });
+          }
+          successCount++;
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error(`Failed: ${file.name}`, { id: toastId });
+        errorCount++;
+      }
+    }
+
+    setIsUploading(false);
+  };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
+    e.preventDefault();
+    setIsDragging(false);
 
-    const files = Array.from(e.dataTransfer.files)
-    if (files.length === 0) return
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
 
-    await processFiles(files)
-  }, [])
+    await processFiles(files);
+  }, []);
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
-        const files = Array.from(e.target.files)
-        await processFiles(files)
+        const files = Array.from(e.target.files);
+        await processFiles(files);
       }
     },
     []
-  )
-
-  const processFiles = async (files: File[]) => {
-    setIsUploading(true)
-    let successCount = 0
-    let errorCount = 0
-
-    // Process one by one for now (or Promise.all)
-    for (const file of files) {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const toastId = toast.loading(`Processing ${file.name}...`)
-
-      try {
-        const result = await extractProposal(formData)
-        if (result.success) {
-          if (result.isDuplicate) {
-            toast.success(`Duplicate: ${file.name}`, { id: toastId })
-          } else {
-            toast.success(`Extracted: ${file.name}`, { id: toastId })
-          }
-          successCount++
-        }
-      } catch (error) {
-        console.error(error)
-        toast.error(`Failed: ${file.name}`, { id: toastId })
-        errorCount++
-      }
-    }
-
-    setIsUploading(false)
-  }
+  );
 
   return (
     <div
@@ -121,8 +121,8 @@ export function UploadZone() {
             variant="outline"
             className="mt-4 gap-2 text-zinc-700 dark:text-zinc-300"
             onClick={(e) => {
-              e.stopPropagation()
-              document.getElementById('file-upload')?.click()
+              e.stopPropagation();
+              document.getElementById('file-upload')?.click();
             }}
           >
             <Upload className="h-4 w-4" />
@@ -131,5 +131,5 @@ export function UploadZone() {
         )}
       </div>
     </div>
-  )
+  );
 }
