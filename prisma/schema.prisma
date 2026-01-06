@@ -20,9 +20,10 @@ enum ProposalStatus {
 }
 
 model Proposal {
-  id       String @id @default(cuid())
-  hash     String @unique
+  id       String  @id @default(cuid())
+  hash     String  @unique
   fileName String
+  fileUrl  String?
 
   status ProposalStatus @default(PROCESSING)
 
