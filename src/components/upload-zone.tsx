@@ -6,43 +6,77 @@ import { toast } from 'sonner';
 import { Upload, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// IMPORTANT: Load worker from CDN to avoid Next.js build errors
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@5.4.530/build/pdf.worker.min.mjs`;
 
 export function UploadZone() {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // --- NEW: Client-Side PDF Renderer ---
+  const convertPdfToImage = async (file: File): Promise<string | null> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+      const page = await pdf.getPage(1); // Get Page 1
+
+      const viewport = page.getViewport({ scale: 2.0 }); // High Res
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      if (!context) return null;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await page.render({ canvasContext: context, viewport } as any).promise;
+      return canvas.toDataURL('image/png'); // Returns Base64 string
+    } catch (e) {
+      console.error('Client rendering failed:', e);
+      return null;
+    }
+  };
+
   const processFiles = async (files: File[]) => {
     setIsUploading(true);
-    let successCount = 0;
-    let errorCount = 0;
 
-    // Process one by one for now (or Promise.all)
     for (const file of files) {
       const formData = new FormData();
       formData.append('file', file);
 
       const toastId = toast.loading(`Processing ${file.name}...`);
+      let clientBase64: string | null = null;
 
       try {
-        const result = await extractProposal(formData);
+        // 1. Render Image on Client (if PDF)
+        if (file.type === 'application/pdf') {
+          toast.loading(`Scanning Document...`, { id: toastId });
+          clientBase64 = await convertPdfToImage(file);
+        }
+
+        // 2. Send to Server (File + Image String)
+        const result = await extractProposal(formData, clientBase64);
+        console.log('debugz result', result);
+
         if (result.success) {
-          if (result.isDuplicate) {
-            toast.success(`Duplicate: ${file.name}`, { id: toastId });
-          } else {
-            toast.success(`Extracted: ${file.name}`, { id: toastId });
-          }
-          successCount++;
+          result.isDuplicate
+            ? toast.success(`Duplicate: ${file.name}`, { id: toastId })
+            : toast.success(`Extracted: ${file.name}`, { id: toastId });
+        } else {
+          toast.error('Extraction failed', { id: toastId });
         }
       } catch (error) {
         console.error(error);
         toast.error(`Failed: ${file.name}`, { id: toastId });
-        errorCount++;
       }
     }
 
     setIsUploading(false);
   };
 
+  // ... (Keep existing drag/drop handlers below) ...
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -56,19 +90,14 @@ export function UploadZone() {
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return;
-
-    await processFiles(files);
+    if (e.dataTransfer.files?.length)
+      await processFiles(Array.from(e.dataTransfer.files));
   }, []);
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files.length > 0) {
-        const files = Array.from(e.target.files);
-        await processFiles(files);
-      }
+      if (e.target.files?.length)
+        await processFiles(Array.from(e.target.files));
     },
     []
   );
@@ -95,7 +124,6 @@ export function UploadZone() {
         className="hidden"
         onChange={handleFileSelect}
       />
-
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="p-4 rounded-full bg-zinc-100 dark:bg-zinc-800">
           {isUploading ? (
@@ -104,7 +132,6 @@ export function UploadZone() {
             <Upload className="h-6 w-6 text-zinc-500" />
           )}
         </div>
-
         <div className="space-y-1">
           <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-50">
             {isUploading
@@ -115,20 +142,6 @@ export function UploadZone() {
             AI will automatically extract contact info and trade scope
           </p>
         </div>
-
-        {!isUploading && (
-          <Button
-            variant="outline"
-            className="mt-4 gap-2 text-zinc-700 dark:text-zinc-300"
-            onClick={(e) => {
-              e.stopPropagation();
-              document.getElementById('file-upload')?.click();
-            }}
-          >
-            <Upload className="h-4 w-4" />
-            Select Files
-          </Button>
-        )}
       </div>
     </div>
   );
