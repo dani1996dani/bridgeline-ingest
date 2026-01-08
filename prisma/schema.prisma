@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -14,6 +8,7 @@ datasource db {
 }
 
 enum ProposalStatus {
+  PENDING
   PROCESSING
   COMPLETED
   FAILED
@@ -25,10 +20,10 @@ model Proposal {
   fileName String
   fileUrl  String?
 
-  status ProposalStatus @default(PROCESSING)
+  status     ProposalStatus @default(PENDING)
+  isVerified Boolean        @default(false)
 
-  isVerified Boolean @default(false)
-
+  // Relation
   extractions Extraction[]
 
   createdAt DateTime @default(now())
@@ -41,8 +36,14 @@ model Extraction {
   proposalId String
   proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 
-  rawText String? @db.Text
-  data    Json
+  companyName String?
+  contactName String?
+  email       String?
+  phone       String?
+  trade       String?
+
+  // We store the Confidence scores and Reasoning strings here to keep the table clean for this demo project
+  analysis Json
 
   createdAt DateTime @default(now())
 }

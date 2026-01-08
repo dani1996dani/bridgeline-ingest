@@ -1,8 +1,11 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  serverExternalPackages: ['pdf-parse'],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '100mb', // Set high to handle multiple files at once
+    },
+  },
 };
 
 export default nextConfig;
