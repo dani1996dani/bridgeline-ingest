@@ -92,7 +92,7 @@ export async function processProposal(proposalId: string) {
     // Cleanup Google File
     await fileManager.deleteFile(googleFile.name);
 
-    // Backend Logic: Calculate Confidence & Review Status
+    // Calculate Confidence & Review Status
     // We do this here so the Frontend just renders the result
     const fieldList = [
       aiData.companyName,

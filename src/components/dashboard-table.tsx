@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { processProposal } from '@/actions/process';
 import {
   Loader2,
   CheckCircle2,
@@ -10,7 +8,6 @@ import {
   ChevronRight,
   FileText,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -20,48 +17,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import pLimit from 'p-limit';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Analysis } from '@/lib/types/analysis';
-
-const limit = pLimit(3);
-
-interface Proposal {
-  id: string;
-  fileName: string;
-  status: string;
-  isVerified: boolean;
-  companyName?: string | null;
-  trade?: string | null;
-  contactName?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  reviewNeeded: boolean;
-  overallConfidence?: string;
-  analysis?: Record<string, Analysis> | null;
-}
+import { ConfidenceBadge } from '@/components/confidence-badge';
+import { Proposal } from '@/types/Proposal';
+import { useProposalQueue } from '@/hooks/use-proposal-queue';
 
 export function DashboardTable({
   initialProposals,
 }: {
   initialProposals: Proposal[];
 }) {
-  const router = useRouter();
-  const [proposals, setProposals] = useState<Proposal[]>(initialProposals);
+  const { proposals } = useProposalQueue(initialProposals);
 
-  // Track if we are currently processing to prevent duplicate runs
-  const isProcessingRef = useRef(false);
-
-  // --- FIX 1: Sync new uploads, but preserve local progress ---
-  useEffect(() => {
-    // Only update if the SERVER has more items than us (new upload happened)
-    if (initialProposals.length > proposals.length) {
-      setProposals(initialProposals);
-    }
-  }, [initialProposals, proposals.length]);
-
-  // --- STATS CALCULATION ---
+  // stats
   const totalCount = proposals.length;
   const processingCount = proposals.filter(
     (p) => p.status === 'PENDING' || p.status === 'PROCESSING'
@@ -72,100 +40,6 @@ export function DashboardTable({
   const readyCount = proposals.filter(
     (p) => p.status === 'COMPLETED' && !p.reviewNeeded
   ).length;
-
-  // --- CLIENT ORCHESTRATOR LOOP ---
-  useEffect(() => {
-    const processQueue = async () => {
-      const pendingItems = proposals.filter((p) => p.status === 'PENDING');
-
-      // Stop if nothing to do or already running
-      if (pendingItems.length === 0 || isProcessingRef.current) return;
-
-      isProcessingRef.current = true;
-
-      const tasks = pendingItems.map((item) => {
-        return limit(async () => {
-          // 1. Optimistic Update (UI goes Blue immediately)
-          setProposals((prev) =>
-            prev.map((p) =>
-              p.id === item.id ? { ...p, status: 'PROCESSING' } : p
-            )
-          );
-
-          try {
-            // 2. Call Server Action
-            const result = await processProposal(item.id);
-
-            if (result.success && result.data) {
-              const data = result.data;
-
-              // 3. Update Local State (UI goes Green)
-              setProposals((prev) =>
-                prev.map((p) =>
-                  p.id === item.id
-                    ? {
-                        ...p,
-                        status: 'COMPLETED',
-                        companyName: data.companyName,
-                        trade: data.trade,
-                        contactName: data.contactName,
-                        email: data.email,
-                        phone: data.phone,
-                        reviewNeeded: data.reviewNeeded,
-                        overallConfidence: data.overallConfidence,
-                        analysis: data.analysis,
-                      }
-                    : p
-                )
-              );
-
-              // FIX 2: REMOVED router.refresh() from here.
-              // We rely on local state updates to show progress.
-            }
-          } catch (e) {
-            console.error(e);
-            setProposals((prev) =>
-              prev.map((p) =>
-                p.id === item.id ? { ...p, status: 'FAILED' } : p
-              )
-            );
-          }
-        });
-      });
-
-      await Promise.all(tasks);
-
-      // FIX 3: Refresh ONLY after everything is done to ensure DB sync
-      isProcessingRef.current = false;
-      router.refresh();
-    };
-
-    processQueue();
-  }, [proposals]); // Run whenever state changes (to catch new PENDING items)
-
-  // --- HELPER: Confidence Badge ---
-  const getConfidenceBadge = (status: string, overallConfidence?: string) => {
-    if (status !== 'COMPLETED')
-      return <Skeleton className="h-5 w-16 rounded-full" />;
-
-    if (overallConfidence === 'LOW')
-      return (
-        <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-red-200 shadow-none">
-          Low Confidence
-        </Badge>
-      );
-    if (overallConfidence === 'MEDIUM')
-      return (
-        <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-yellow-200 shadow-none">
-          Medium
-        </Badge>
-      );
-    return (
-      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200 shadow-none">
-        High
-      </Badge>
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -289,7 +163,10 @@ export function DashboardTable({
                 </TableCell>
 
                 <TableCell>
-                  {getConfidenceBadge(item.status, item.overallConfidence)}
+                  <ConfidenceBadge
+                    status={item.status}
+                    confidence={item.overallConfidence}
+                  />
                 </TableCell>
 
                 <TableCell className="text-right">
