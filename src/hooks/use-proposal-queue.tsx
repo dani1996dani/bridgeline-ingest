@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { processProposal } from '@/actions/process';
 import pLimit from 'p-limit';
 import { Proposal } from '@/types/Proposal';
+import { retryProposal } from '@/actions/retry';
 
 const limit = pLimit(3);
 
@@ -82,5 +83,15 @@ export function useProposalQueue(initialProposals: Proposal[]) {
     processQueue();
   }, [proposals, router]);
 
-  return { proposals, setProposals };
+  const handleRetry = async (proposalId: string) => {
+    // Optimistic Update: Re-queue it locally
+    setProposals((prev) =>
+      prev.map((p) => (p.id === proposalId ? { ...p, status: 'PENDING' } : p))
+    );
+
+    // Server Update
+    await retryProposal(proposalId);
+  };
+
+  return { proposals, handleRetry };
 }

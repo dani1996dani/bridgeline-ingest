@@ -7,6 +7,7 @@ import {
   XCircle,
   ChevronRight,
   FileText,
+  RotateCcw,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -27,7 +28,7 @@ export function DashboardTable({
 }: {
   initialProposals: Proposal[];
 }) {
-  const { proposals } = useProposalQueue(initialProposals);
+  const { proposals, handleRetry } = useProposalQueue(initialProposals);
 
   // stats
   const totalCount = proposals.length;
@@ -170,13 +171,28 @@ export function DashboardTable({
                 </TableCell>
 
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-zinc-800 hover:text-black hover:bg-zinc-100 font-medium h-8"
-                  >
-                    Review <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
+                  {item.status === 'COMPLETED' ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-zinc-800 hover:text-black hover:bg-zinc-100 font-medium h-8"
+                    >
+                      Review <ChevronRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  ) : null}
+                  {item.status === 'FAILED' ? (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="font-medium h-8"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Stop row click
+                        handleRetry(item.id);
+                      }}
+                    >
+                      Retry <RotateCcw className="ml-1.5 h-4 w-4" />
+                    </Button>
+                  ) : null}
                 </TableCell>
               </TableRow>
             ))}
