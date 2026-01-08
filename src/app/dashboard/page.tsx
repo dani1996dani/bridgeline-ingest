@@ -8,7 +8,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50/50">
-      <div className="container max-w-7xl mx-auto py-10">
+      <div className="container max-w-8xl mx-auto py-10">
         <DashboardTable initialProposals={proposals} />
       </div>
     </div>

@@ -205,12 +205,12 @@ export function DashboardTable({
         <Table>
           <TableHeader className="bg-zinc-50/50">
             <TableRow>
-              <TableHead className="w-[50px]"></TableHead>
-              <TableHead>Company Name</TableHead>
-              <TableHead>Trade</TableHead>
-              <TableHead>Contact Info</TableHead>
+              <TableHead className="w-[100px]">Status</TableHead>
+              <TableHead className="w-[400px]">Company Name</TableHead>
+              <TableHead className="w-[400px]">Trade</TableHead>
+              <TableHead className="w-[350px]">Contact Info</TableHead>
               <TableHead>Confidence</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -296,7 +296,7 @@ export function DashboardTable({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium h-8"
+                    className="text-zinc-800 hover:text-black hover:bg-zinc-100 font-medium h-8"
                   >
                     Review <ChevronRight className="ml-1 h-4 w-4" />
                   </Button>

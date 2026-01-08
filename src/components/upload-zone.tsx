@@ -25,10 +25,14 @@ export function UploadZone() {
       return true;
     });
 
-    if (validFiles.length === 0) return;
+    const filesCount = validFiles.length;
+    if (filesCount === 0) return;
 
     setIsUploading(true);
-    const toastId = toast.loading(`Uploading ${validFiles.length} files...`);
+
+    const toastId = toast.loading(
+      `Uploading ${filesCount} ${filesCount > 1 ? 'files' : 'file'}...`
+    );
 
     try {
       const formData = new FormData();
@@ -40,9 +44,13 @@ export function UploadZone() {
 
       // Handle the result
       if (result.success) {
-        toast.success(`Uploaded ${result.results.length} files`, {
-          id: toastId,
-        });
+        const fileCount = result.results.length;
+        toast.success(
+          `Uploaded ${fileCount} ${fileCount > 1 ? 'files' : 'file'}`,
+          {
+            id: toastId,
+          }
+        );
         router.push('/dashboard');
       }
     } catch (error) {
