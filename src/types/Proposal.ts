@@ -20,7 +20,7 @@ export interface Proposal {
 
   // UI & Analysis State
   reviewNeeded: boolean;
-  overallConfidence: ConfidenceLevel | 'PENDING';
+  overallConfidence: ConfidenceLevel;
 
   // Full Map of Fields
   fields?: Record<string, ExtractionField>;
