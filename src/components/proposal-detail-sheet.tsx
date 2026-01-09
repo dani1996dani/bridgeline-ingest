@@ -14,13 +14,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertCircle, AlertTriangle, FileText, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { Proposal } from '@/types/Proposal';
-import { PdfViewer } from '@/components/pdf-viewer';
 import { updateProposal } from '@/actions/update-proposal';
 import { toast } from 'sonner';
 import { ConfidenceLevel } from '@/types/Confidence';
 import { ConfidenceAlert } from '@/components/confidence-alert';
+import { DocumentPreview } from '@/components/document-preview';
 
 const proposalFormSchema = z.object({
   companyName: z.string().optional(),
@@ -39,12 +39,12 @@ interface ProposalDetailSheetProps {
   onUpdate?: (id: string, updates: Partial<Proposal>) => void;
 }
 
-export function ProposalDetailSheet({
+export const ProposalDetailSheet = ({
   proposal,
   open,
   onOpenChange,
   onUpdate,
-}: ProposalDetailSheetProps) {
+}: ProposalDetailSheetProps) => {
   const router = useRouter();
   const {
     register,
@@ -96,40 +96,14 @@ export function ProposalDetailSheet({
 
   if (!proposal) return null;
 
-  const isPdf = proposal.fileName.toLowerCase().endsWith('.pdf');
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[90vw] max-w-[90vw] sm:max-w-[90vw] p-0 overflow-hidden flex flex-row gap-0">
         {/* Left Panel: Document Viewer */}
-        <div className="flex-1 bg-zinc-100 dark:bg-zinc-800 border-r relative hidden md:block overflow-hidden">
-          {proposal.fileUrl ? (
-            isPdf ? (
-              <PdfViewer url={proposal.fileUrl} />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6 text-center">
-                <FileText className="h-16 w-16 mb-4 opacity-20" />
-                <p className="mb-4 text-sm font-medium">
-                  Preview not available for this file type.
-                </p>
-                <Button variant="outline" asChild>
-                  <a
-                    href={proposal.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View Original File
-                  </a>
-                </Button>
-              </div>
-            )
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6 text-center">
-              <FileText className="h-12 w-12 mb-4 opacity-20" />
-              <p>No document preview available.</p>
-            </div>
-          )}
-        </div>
+        <DocumentPreview
+          fileUrl={proposal.fileUrl}
+          fileName={proposal.fileName}
+        />
 
         {/* Right Panel: Form */}
         <div className="w-full md:w-[600px] flex flex-col h-full bg-white dark:bg-zinc-950">
@@ -204,7 +178,7 @@ export function ProposalDetailSheet({
       </SheetContent>
     </Sheet>
   );
-}
+};
 
 // Helper component to reduce repetition
 const ExtractionField = ({
