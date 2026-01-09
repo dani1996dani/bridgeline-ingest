@@ -1,49 +1,56 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { Analysis } from '@/lib/types/analysis';
+import { ConfidenceLevel } from '@/types/Confidence';
 
 export async function getProposals() {
   const proposals = await prisma.proposal.findMany({
     take: 100,
     orderBy: { createdAt: 'desc' },
     include: {
-      extractions: {
-        take: 1,
-        orderBy: { createdAt: 'desc' },
-      },
+      fields: true,
     },
   });
 
   return proposals.map((p) => {
-    const ext = p.extractions[0];
-    const analysis = ext?.analysis as Record<string, Analysis> | null;
+    // Transform fields array to a detailed map for the UI
+    const fields = p.fields.reduce(
+      (acc, field) => {
+        acc[field.name] = {
+          value: field.value,
+          confidence: field.confidence as ConfidenceLevel,
+          reasoning: field.reasoning,
+        };
+        return acc;
+      },
+      {} as Record<
+        string,
+        { value: string | null; confidence: ConfidenceLevel; reasoning: string }
+      >
+    );
 
     // Calculate Overall Confidence & Review Status
     let reviewNeeded = false;
-    let overallConfidence = 'HIGH';
+    let overallConfidence = ConfidenceLevel.HIGH;
 
-    if (analysis) {
-      const fields = [
-        analysis.companyName,
-        analysis.contactName,
-        analysis.email,
-        analysis.phone,
-        analysis.trade,
-      ];
-
-      const hasLow = fields.some((f) => f?.confidence === 'LOW');
-      const hasMedium = fields.some((f) => f?.confidence === 'MEDIUM');
+    if (p.fields.length > 0) {
+      const hasLow = p.fields.some((f) => f.confidence === ConfidenceLevel.LOW);
+      const hasMedium = p.fields.some(
+        (f) => f.confidence === ConfidenceLevel.MEDIUM
+      );
 
       if (hasLow) {
-        overallConfidence = 'LOW';
+        overallConfidence = ConfidenceLevel.LOW;
         reviewNeeded = true;
       } else if (hasMedium) {
-        overallConfidence = 'MEDIUM';
+        overallConfidence = ConfidenceLevel.MEDIUM;
         reviewNeeded = true;
       }
     } else {
-      overallConfidence = 'PENDING';
+      overallConfidence =
+        p.status === 'COMPLETED'
+          ? ConfidenceLevel.HIGH
+          : ConfidenceLevel.PENDING;
     }
 
     return {
@@ -51,20 +58,20 @@ export async function getProposals() {
       fileName: p.fileName,
       fileUrl: p.fileUrl,
       status: p.status,
-      isVerified: p.isVerified,
+      approvalStatus: p.approvalStatus,
 
-      // Strings for Table
-      companyName: ext?.companyName,
-      trade: ext?.trade,
-      contactName: ext?.contactName,
-      email: ext?.email,
-      phone: ext?.phone,
+      // Strings for Table (derived from fields map)
+      companyName: fields['companyName']?.value || null,
+      trade: fields['trade']?.value || null,
+      contactName: fields['contactName']?.value || null,
+      email: fields['email']?.value || null,
+      phone: fields['phone']?.value || null,
 
       // Meta & Full Object
       reviewNeeded,
       overallConfidence,
       createdAt: p.createdAt,
-      analysis,
+      fields,
     };
   });
 }

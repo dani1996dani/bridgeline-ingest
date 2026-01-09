@@ -83,7 +83,7 @@ export function useProposalQueue(initialProposals: Proposal[]) {
     processQueue();
   }, [proposals, router]);
 
-  const handleRetry = async (proposalId: string) => {
+  const handleRetryProposalProcess = async (proposalId: string) => {
     // Optimistic Update: Re-queue it locally
     setProposals((prev) =>
       prev.map((p) => (p.id === proposalId ? { ...p, status: 'PENDING' } : p))
@@ -93,5 +93,14 @@ export function useProposalQueue(initialProposals: Proposal[]) {
     await retryProposal(proposalId);
   };
 
-  return { proposals, handleRetry };
+  const updateProposalState = (
+    proposalId: string,
+    updates: Partial<Proposal>
+  ) => {
+    setProposals((prev) =>
+      prev.map((p) => (p.id === proposalId ? { ...p, ...updates } : p))
+    );
+  };
+
+  return { proposals, handleRetryProposalProcess, updateProposalState };
 }

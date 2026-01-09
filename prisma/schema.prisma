@@ -7,6 +7,8 @@ datasource db {
   provider = "postgresql"
 }
 
+// Enums
+
 enum ProposalStatus {
   PENDING
   PROCESSING
@@ -14,36 +16,63 @@ enum ProposalStatus {
   FAILED
 }
 
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ConfidenceLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ExtractionSource {
+  AI
+  USER
+}
+
+// Models
+
 model Proposal {
   id       String  @id @default(cuid())
   hash     String  @unique
   fileName String
   fileUrl  String?
 
-  status     ProposalStatus @default(PENDING)
-  isVerified Boolean        @default(false)
+  status         ProposalStatus @default(PENDING)
+  approvalStatus ApprovalStatus @default(PENDING)
 
-  // Relation
-  extractions Extraction[]
+  // One Proposal has Many Fields
+  fields ExtractionField[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model Extraction {
+model ExtractionField {
   id String @id @default(cuid())
 
   proposalId String
   proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 
-  companyName String?
-  contactName String?
-  email       String?
-  phone       String?
-  trade       String?
+  // The Key (e.g. "companyName", "trade")
+  name String
 
-  // We store the Confidence scores and Reasoning strings here to keep the table clean for this demo project
-  analysis Json
+  // The Data
+  value String?
+
+  // The Metadata (Always present)
+  // AI sets this based on analysis.
+  // User Edit sets this to HIGH / "Manual user edit".
+  confidence ConfidenceLevel
+  reasoning  String
+  source     ExtractionSource @default(AI)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Constraint: One value per field per proposal
+  @@unique([proposalId, name])
 }

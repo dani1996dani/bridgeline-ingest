@@ -22,13 +22,20 @@ import { Button } from '@/components/ui/button';
 import { ConfidenceBadge } from '@/components/confidence-badge';
 import { Proposal } from '@/types/Proposal';
 import { useProposalQueue } from '@/hooks/use-proposal-queue';
+import { useState } from 'react';
+import { ProposalDetailSheet } from '@/components/proposal-detail-sheet';
 
 export function DashboardTable({
   initialProposals,
 }: {
   initialProposals: Proposal[];
 }) {
-  const { proposals, handleRetry } = useProposalQueue(initialProposals);
+  const { proposals, handleRetryProposalProcess, updateProposalState } =
+    useProposalQueue(initialProposals);
+  const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(
+    null
+  );
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   // stats
   const totalCount = proposals.length;
@@ -93,7 +100,10 @@ export function DashboardTable({
               <TableRow
                 key={item.id}
                 className="cursor-pointer hover:bg-zinc-50 transition-colors group"
-                onClick={() => console.log('Open Sheet for', item.id)}
+                onClick={() => {
+                  setSelectedProposal(item);
+                  setIsSheetOpen(true);
+                }}
               >
                 <TableCell>
                   {item.status === 'PENDING' || item.status === 'PROCESSING' ? (
@@ -108,20 +118,20 @@ export function DashboardTable({
                 </TableCell>
 
                 <TableCell className="font-medium text-zinc-900">
-                  {item.status === 'COMPLETED' ? (
-                    item.companyName || (
-                      <span className="text-muted-foreground italic">
-                        Unknown Company
-                      </span>
-                    )
-                  ) : (
-                    <div className="space-y-2">
+                  <div className="space-y-2">
+                    {item.status === 'COMPLETED' ? (
+                      item.companyName || (
+                        <span className="text-muted-foreground italic">
+                          Unknown Company
+                        </span>
+                      )
+                    ) : (
                       <Skeleton className="h-4 w-[180px]" />
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <FileText className="h-3 w-3" /> {item.fileName}
-                      </span>
-                    </div>
-                  )}
+                    )}
+                    <span className="text-xs text-muted-foreground flex items-center gap-1 font-normal">
+                      <FileText className="h-3 w-3" /> {item.fileName}
+                    </span>
+                  </div>
                 </TableCell>
 
                 <TableCell>
@@ -131,7 +141,9 @@ export function DashboardTable({
                         {item.trade}
                       </div>
                     ) : (
-                      <span className="text-muted-foreground">-</span>
+                      <span className="text-xs text-muted-foreground italic">
+                        Unknown Trade
+                      </span>
                     )
                   ) : (
                     <Skeleton className="h-6 w-[100px] rounded-md" />
@@ -151,8 +163,16 @@ export function DashboardTable({
                         </span>
                       )}
                       <div className="flex flex-col text-xs text-zinc-500">
-                        <span>{item.email || '-'}</span>
-                        <span>{item.phone || '-'}</span>
+                        {item.email ? (
+                          <span>{item.email}</span>
+                        ) : (
+                          <span className="italic text-zinc-400">No Email</span>
+                        )}
+                        {item.phone ? (
+                          <span>{item.phone}</span>
+                        ) : (
+                          <span className="italic text-zinc-400">No Phone</span>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -187,7 +207,7 @@ export function DashboardTable({
                       className="font-medium h-8"
                       onClick={(e) => {
                         e.stopPropagation(); // Stop row click
-                        handleRetry(item.id);
+                        handleRetryProposalProcess(item.id);
                       }}
                     >
                       Retry <RotateCcw className="ml-1.5 h-4 w-4" />
@@ -199,6 +219,12 @@ export function DashboardTable({
           </TableBody>
         </Table>
       </div>
+      <ProposalDetailSheet
+        proposal={selectedProposal}
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        onUpdate={updateProposalState}
+      />
     </div>
   );
 }
