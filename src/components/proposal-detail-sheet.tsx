@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
   SheetDescription,
   SheetFooter,
+  SheetHeader,
+  SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { Proposal } from '@/types/Proposal';
 import { PdfViewer } from '@/components/pdf-viewer';
 import { updateProposal } from '@/actions/update-proposal';
 import { toast } from 'sonner';
+import { ConfidenceLevel } from '@/types/Confidence';
 
 const proposalFormSchema = z.object({
   companyName: z.string().optional(),
@@ -156,8 +157,9 @@ export function ProposalDetailSheet({
           <ScrollArea className="flex-1 px-6 py-6">
             <div className="space-y-6">
               {/* Warning Banner */}
-              {(proposal.overallConfidence === 'LOW' ||
-                proposal.overallConfidence === 'MEDIUM') && (
+              {[ConfidenceLevel.LOW, ConfidenceLevel.MEDIUM].includes(
+                proposal.overallConfidence
+              ) && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5" />
