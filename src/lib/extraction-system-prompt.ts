@@ -42,6 +42,11 @@ Analyze the provided PDF (Visual Layout + Text Content) and extract the followin
 
 ---
 
+FINAL INSTRUCTION:
+Review your findings. For every field (companyName, contactName, etc.), you MUST return an object containing three keys: 'value', 'confidence', and 'reasoning'. 
+If you found a value, put it in the 'value' key. 
+If you are certain a value is missing, the value for the 'value' key should be the JSON literal null, not the string "null".
+
 **OUTPUT:**
 Return ONLY valid JSON matching the provided schema.
 `;
