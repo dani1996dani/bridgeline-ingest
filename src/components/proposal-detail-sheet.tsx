@@ -20,6 +20,7 @@ import { PdfViewer } from '@/components/pdf-viewer';
 import { updateProposal } from '@/actions/update-proposal';
 import { toast } from 'sonner';
 import { ConfidenceLevel } from '@/types/Confidence';
+import { ConfidenceAlert } from '@/components/confidence-alert';
 
 const proposalFormSchema = z.object({
   companyName: z.string().optional(),
@@ -141,25 +142,7 @@ export function ProposalDetailSheet({
 
           <ScrollArea className="flex-1 px-6 py-6">
             <div className="space-y-6">
-              {/* Warning Banner */}
-              {[ConfidenceLevel.LOW, ConfidenceLevel.MEDIUM].includes(
-                proposal.overallConfidence
-              ) && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-500">
-                        Low confidence detected
-                      </h4>
-                      <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                        Some fields may need manual verification. Highlighted
-                        fields have lower extraction confidence.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <ConfidenceAlert overallConfidence={proposal.overallConfidence} />
 
               <form
                 id="extraction-form"
