@@ -29,7 +29,7 @@ export const DocumentPreview = ({
       {isPdf ? (
         <PdfViewer url={fileUrl} />
       ) : (
-        // Non-PDF Fallback (Iframe or Download Link)
+        // Non-PDF Fallback (View in browser or Download file, based on file type)
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6 text-center">
           <FileText className="h-16 w-16 mb-4 opacity-20" />
           <p className="mb-4 text-sm font-medium">
