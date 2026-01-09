@@ -93,21 +93,6 @@ export function ProposalDetailSheet({
     }
   };
 
-  const getConfidenceStyle = (field: string) => {
-    if (!proposal?.fields) return '';
-    const confidence = proposal.fields[field]?.confidence;
-    if (confidence === 'LOW' || confidence === 'MEDIUM') {
-      return 'border-amber-400 focus-visible:ring-amber-400 bg-amber-50/10';
-    }
-    return '';
-  };
-
-  const showWarning = (field: string) => {
-    if (!proposal?.fields) return false;
-    const confidence = proposal.fields[field]?.confidence;
-    return confidence === 'LOW' || confidence === 'MEDIUM';
-  };
-
   if (!proposal) return null;
 
   const isPdf = proposal.fileName.toLowerCase().endsWith('.pdf');
@@ -181,75 +166,40 @@ export function ProposalDetailSheet({
                 onSubmit={handleSubmit(onSubmit)}
                 className="space-y-4"
               >
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">Company Name</Label>
-                  <div className="relative">
-                    <Input
-                      id="companyName"
-                      {...register('companyName')}
-                      className={getConfidenceStyle('companyName')}
-                    />
-                    {showWarning('companyName') && (
-                      <AlertCircle className="absolute right-3 top-2.5 h-4 w-4 text-amber-500" />
-                    )}
-                  </div>
-                </div>
+                <ExtractionField
+                  id="companyName"
+                  label="Company Name"
+                  registerProps={register('companyName')}
+                  confidence={proposal.fields?.companyName?.confidence}
+                />
 
-                <div className="space-y-2">
-                  <Label htmlFor="contactName">Contact Name</Label>
-                  <div className="relative">
-                    <Input
-                      id="contactName"
-                      {...register('contactName')}
-                      className={getConfidenceStyle('contactName')}
-                    />
-                    {showWarning('contactName') && (
-                      <AlertCircle className="absolute right-3 top-2.5 h-4 w-4 text-amber-500" />
-                    )}
-                  </div>
-                </div>
+                <ExtractionField
+                  id="contactName"
+                  label="Contact Name"
+                  registerProps={register('contactName')}
+                  confidence={proposal.fields?.contactName?.confidence}
+                />
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Input
-                      id="email"
-                      {...register('email')}
-                      className={getConfidenceStyle('email')}
-                    />
-                    {showWarning('email') && (
-                      <AlertCircle className="absolute right-3 top-2.5 h-4 w-4 text-amber-500" />
-                    )}
-                  </div>
-                </div>
+                <ExtractionField
+                  id="email"
+                  label="Email"
+                  registerProps={register('email')}
+                  confidence={proposal.fields?.email?.confidence}
+                />
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <div className="relative">
-                    <Input
-                      id="phone"
-                      {...register('phone')}
-                      className={getConfidenceStyle('phone')}
-                    />
-                    {showWarning('phone') && (
-                      <AlertCircle className="absolute right-3 top-2.5 h-4 w-4 text-amber-500" />
-                    )}
-                  </div>
-                </div>
+                <ExtractionField
+                  id="phone"
+                  label="Phone"
+                  registerProps={register('phone')}
+                  confidence={proposal.fields?.phone?.confidence}
+                />
 
-                <div className="space-y-2">
-                  <Label htmlFor="trade">Trade</Label>
-                  <div className="relative">
-                    <Input
-                      id="trade"
-                      {...register('trade')}
-                      className={getConfidenceStyle('trade')}
-                    />
-                    {showWarning('trade') && (
-                      <AlertCircle className="absolute right-3 top-2.5 h-4 w-4 text-amber-500" />
-                    )}
-                  </div>
-                </div>
+                <ExtractionField
+                  id="trade"
+                  label="Trade"
+                  registerProps={register('trade')}
+                  confidence={proposal.fields?.trade?.confidence}
+                />
               </form>
             </div>
           </ScrollArea>
@@ -272,3 +222,36 @@ export function ProposalDetailSheet({
     </Sheet>
   );
 }
+
+// Helper component to reduce repetition
+const ExtractionField = ({
+  label,
+  id,
+  registerProps,
+  confidence,
+}: {
+  label: string;
+  id: string;
+  registerProps: any;
+  confidence?: ConfidenceLevel;
+}) => {
+  const isLowConfidence = confidence
+    ? [ConfidenceLevel.LOW, ConfidenceLevel.MEDIUM].includes(confidence)
+    : ConfidenceLevel.LOW;
+
+  const style = isLowConfidence
+    ? 'border-amber-400 focus-visible:ring-amber-400 bg-amber-50/10'
+    : '';
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative">
+        <Input id={id} {...registerProps} className={style} />
+        {isLowConfidence && (
+          <AlertCircle className="absolute right-3 top-2.5 h-4 w-4 text-amber-500" />
+        )}
+      </div>
+    </div>
+  );
+};
