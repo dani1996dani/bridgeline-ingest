@@ -13,15 +13,6 @@ export async function getProposals() {
   });
 
   return proposals.map((p) => {
-    // Transform fields array to a map for flat properties
-    const fieldMap = p.fields.reduce(
-      (acc, field) => {
-        acc[field.name] = field.value;
-        return acc;
-      },
-      {} as Record<string, string | null>
-    );
-
     // Transform fields array to a detailed map for the UI
     const fields = p.fields.reduce(
       (acc, field) => {
@@ -69,12 +60,12 @@ export async function getProposals() {
       status: p.status,
       approvalStatus: p.approvalStatus,
 
-      // Strings for Table
-      companyName: fieldMap['companyName'] || null,
-      trade: fieldMap['trade'] || null,
-      contactName: fieldMap['contactName'] || null,
-      email: fieldMap['email'] || null,
-      phone: fieldMap['phone'] || null,
+      // Strings for Table (derived from fields map)
+      companyName: fields['companyName']?.value || null,
+      trade: fields['trade']?.value || null,
+      contactName: fields['contactName']?.value || null,
+      email: fields['email']?.value || null,
+      phone: fields['phone']?.value || null,
 
       // Meta & Full Object
       reviewNeeded,

@@ -123,8 +123,7 @@ export async function processProposal(proposalId: string) {
       for (const [name, data] of Object.entries(fieldMap)) {
         const fieldData = {
           value: data?.value ?? null,
-          confidence:
-            (data?.confidence as ConfidenceLevel) || ConfidenceLevel.LOW,
+          confidence: data?.confidence || ConfidenceLevel.LOW,
           reasoning: data?.reasoning || '',
         };
 
@@ -155,6 +154,26 @@ export async function processProposal(proposalId: string) {
 
     revalidatePath('/dashboard');
 
+    // Construct the fields map for the UI
+    const fields = Object.entries(fieldMap).reduce(
+      (acc, [name, data]) => {
+        acc[name] = {
+          value: data?.value ?? null,
+          confidence: data?.confidence || ConfidenceLevel.LOW,
+          reasoning: data?.reasoning || '',
+        };
+        return acc;
+      },
+      {} as Record<
+        string,
+        {
+          value: string | null;
+          confidence: ConfidenceLevel;
+          reasoning: string;
+        }
+      >
+    );
+
     // Return Flattened Data for UI
     return {
       success: true,
@@ -166,25 +185,7 @@ export async function processProposal(proposalId: string) {
         phone: phone?.value,
         reviewNeeded,
         overallConfidence,
-        fields: Object.entries(fieldMap).reduce(
-          (acc, [name, data]) => {
-            acc[name] = {
-              value: data?.value ?? null,
-              confidence:
-                (data?.confidence as ConfidenceLevel) || ConfidenceLevel.LOW,
-              reasoning: data?.reasoning || '',
-            };
-            return acc;
-          },
-          {} as Record<
-            string,
-            {
-              value: string | null;
-              confidence: ConfidenceLevel;
-              reasoning: string;
-            }
-          >
-        ),
+        fields,
       },
     };
   } catch (error) {
