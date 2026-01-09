@@ -117,20 +117,20 @@ export function DashboardTable({
                 </TableCell>
 
                 <TableCell className="font-medium text-zinc-900">
-                  {item.status === 'COMPLETED' ? (
-                    item.companyName || (
-                      <span className="text-muted-foreground italic">
-                        Unknown Company
-                      </span>
-                    )
-                  ) : (
-                    <div className="space-y-2">
+                  <div className="space-y-2">
+                    {item.status === 'COMPLETED' ? (
+                      item.companyName || (
+                        <span className="text-muted-foreground italic">
+                          Unknown Company
+                        </span>
+                      )
+                    ) : (
                       <Skeleton className="h-4 w-[180px]" />
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <FileText className="h-3 w-3" /> {item.fileName}
-                      </span>
-                    </div>
-                  )}
+                    )}
+                    <span className="text-xs text-muted-foreground flex items-center gap-1 font-normal">
+                      <FileText className="h-3 w-3" /> {item.fileName}
+                    </span>
+                  </div>
                 </TableCell>
 
                 <TableCell>

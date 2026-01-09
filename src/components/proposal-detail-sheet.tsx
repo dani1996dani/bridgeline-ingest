@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AlertCircle, AlertTriangle, FileText, Trash2 } from 'lucide-react';
+import { AlertCircle, AlertTriangle, FileText } from 'lucide-react';
 import { Proposal } from '@/types/Proposal';
 import { PdfViewer } from '@/components/pdf-viewer';
 
@@ -35,8 +35,8 @@ export function ProposalDetailSheet({
   onOpenChange,
 }: ProposalDetailSheetProps) {
   const getConfidenceStyle = (field: string) => {
-    if (!proposal?.analysis) return '';
-    const confidence = proposal.analysis[field]?.confidence;
+    if (!proposal?.fields) return '';
+    const confidence = proposal.fields[field]?.confidence;
     if (confidence === 'LOW' || confidence === 'MEDIUM') {
       return 'border-amber-400 focus-visible:ring-amber-400 bg-amber-50/10';
     }
@@ -44,8 +44,8 @@ export function ProposalDetailSheet({
   };
 
   const showWarning = (field: string) => {
-    if (!proposal?.analysis) return false;
-    const confidence = proposal.analysis[field]?.confidence;
+    if (!proposal?.fields) return false;
+    const confidence = proposal.fields[field]?.confidence;
     return confidence === 'LOW' || confidence === 'MEDIUM';
   };
 

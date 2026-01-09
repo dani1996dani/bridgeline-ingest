@@ -8,6 +8,7 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { ProposalStatus } from '@/generated/prisma/client';
+import { ConfidenceLevel } from '@/types/Confidence';
 import { geminiSchema } from '@/lib/gemini-schema';
 import { EXTRACTION_SYSTEM_PROMPT } from '@/lib/extraction-system-prompt';
 
@@ -88,56 +89,68 @@ export async function processProposal(proposalId: string) {
 
     const jsonText = result.response.text();
     const aiData = JSON.parse(jsonText);
+    const { companyName, contactName, email, phone, trade } = aiData;
 
     // Cleanup Google File
     await fileManager.deleteFile(googleFile.name);
 
     // Calculate Confidence & Review Status
     // We do this here so the Frontend just renders the result
-    const fieldList = [
-      aiData.companyName,
-      aiData.contactName,
-      aiData.email,
-      aiData.phone,
-      aiData.trade,
-    ];
+    const fieldList = [companyName, contactName, email, phone, trade];
 
-    let overallConfidence = 'HIGH';
+    let overallConfidence = ConfidenceLevel.HIGH;
     let reviewNeeded = false;
 
     // Check if ANY field is LOW
-    const hasLow = fieldList.some((f) => f?.confidence === 'LOW');
+    const hasLow = fieldList.some((f) => f?.confidence === ConfidenceLevel.LOW);
     // Check if ANY field is MEDIUM
-    const hasMedium = fieldList.some((f) => f?.confidence === 'MEDIUM');
+    const hasMedium = fieldList.some(
+      (f) => f?.confidence === ConfidenceLevel.MEDIUM
+    );
 
     if (hasLow) {
-      overallConfidence = 'LOW';
+      overallConfidence = ConfidenceLevel.LOW;
       reviewNeeded = true;
     } else if (hasMedium) {
-      overallConfidence = 'MEDIUM';
+      overallConfidence = ConfidenceLevel.MEDIUM;
       reviewNeeded = true;
     }
 
     // Save to DB
-    // Create Extraction Record
-    await prisma.extraction.create({
-      data: {
-        proposalId: proposalId,
-        companyName: aiData.companyName?.value || null,
-        contactName: aiData.contactName?.value || null,
-        email: aiData.email?.value || null,
-        phone: aiData.phone?.value || null,
-        trade: aiData.trade?.value || null,
-        analysis: aiData,
-      },
-    });
+    const fieldMap = { companyName, contactName, email, phone, trade };
 
-    // Update Proposal
-    await prisma.proposal.update({
-      where: { id: proposalId },
-      data: {
-        status: ProposalStatus.COMPLETED,
-      },
+    await prisma.$transaction(async (tx) => {
+      for (const [name, data] of Object.entries(fieldMap)) {
+        const fieldData = {
+          value: data?.value ?? null,
+          confidence:
+            (data?.confidence as ConfidenceLevel) || ConfidenceLevel.LOW,
+          reasoning: data?.reasoning || '',
+        };
+
+        await tx.extractionField.upsert({
+          where: {
+            proposalId_name: {
+              proposalId,
+              name,
+            },
+          },
+          update: fieldData,
+          create: {
+            ...fieldData,
+            proposalId,
+            name,
+          },
+        });
+      }
+
+      // Update Proposal
+      await tx.proposal.update({
+        where: { id: proposalId },
+        data: {
+          status: ProposalStatus.COMPLETED,
+        },
+      });
     });
 
     revalidatePath('/dashboard');
@@ -146,14 +159,32 @@ export async function processProposal(proposalId: string) {
     return {
       success: true,
       data: {
-        companyName: aiData.companyName?.value,
-        trade: aiData.trade?.value,
-        contactName: aiData.contactName?.value,
-        email: aiData.email?.value,
-        phone: aiData.phone?.value,
+        companyName: companyName?.value,
+        trade: trade?.value,
+        contactName: contactName?.value,
+        email: email?.value,
+        phone: phone?.value,
         reviewNeeded,
         overallConfidence,
-        analysis: aiData,
+        fields: Object.entries(fieldMap).reduce(
+          (acc, [name, data]) => {
+            acc[name] = {
+              value: data?.value ?? null,
+              confidence:
+                (data?.confidence as ConfidenceLevel) || ConfidenceLevel.LOW,
+              reasoning: data?.reasoning || '',
+            };
+            return acc;
+          },
+          {} as Record<
+            string,
+            {
+              value: string | null;
+              confidence: ConfidenceLevel;
+              reasoning: string;
+            }
+          >
+        ),
       },
     };
   } catch (error) {
