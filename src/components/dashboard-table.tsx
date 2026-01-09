@@ -22,6 +22,8 @@ import { Button } from '@/components/ui/button';
 import { ConfidenceBadge } from '@/components/confidence-badge';
 import { Proposal } from '@/types/Proposal';
 import { useProposalQueue } from '@/hooks/use-proposal-queue';
+import { useState } from 'react';
+import { ProposalDetailSheet } from '@/components/proposal-detail-sheet';
 
 export function DashboardTable({
   initialProposals,
@@ -29,6 +31,10 @@ export function DashboardTable({
   initialProposals: Proposal[];
 }) {
   const { proposals, handleRetry } = useProposalQueue(initialProposals);
+  const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(
+    null
+  );
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   // stats
   const totalCount = proposals.length;
@@ -93,7 +99,10 @@ export function DashboardTable({
               <TableRow
                 key={item.id}
                 className="cursor-pointer hover:bg-zinc-50 transition-colors group"
-                onClick={() => console.log('Open Sheet for', item.id)}
+                onClick={() => {
+                  setSelectedProposal(item);
+                  setIsSheetOpen(true);
+                }}
               >
                 <TableCell>
                   {item.status === 'PENDING' || item.status === 'PROCESSING' ? (
@@ -199,6 +208,11 @@ export function DashboardTable({
           </TableBody>
         </Table>
       </div>
+      <ProposalDetailSheet
+        proposal={selectedProposal}
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+      />
     </div>
   );
 }

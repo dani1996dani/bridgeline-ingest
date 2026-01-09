@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { Analysis } from '@/lib/types/analysis';
+import { Analysis } from '@/types/analysis';
 
 export async function getProposals() {
   const proposals = await prisma.proposal.findMany({
