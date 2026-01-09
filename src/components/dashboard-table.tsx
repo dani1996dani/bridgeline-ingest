@@ -30,7 +30,8 @@ export function DashboardTable({
 }: {
   initialProposals: Proposal[];
 }) {
-  const { proposals, handleRetry } = useProposalQueue(initialProposals);
+  const { proposals, handleRetryProposalProcess, updateProposalState } =
+    useProposalQueue(initialProposals);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(
     null
   );
@@ -140,7 +141,9 @@ export function DashboardTable({
                         {item.trade}
                       </div>
                     ) : (
-                      <span className="text-muted-foreground">-</span>
+                      <span className="text-xs text-muted-foreground italic">
+                        Unknown Trade
+                      </span>
                     )
                   ) : (
                     <Skeleton className="h-6 w-[100px] rounded-md" />
@@ -160,8 +163,16 @@ export function DashboardTable({
                         </span>
                       )}
                       <div className="flex flex-col text-xs text-zinc-500">
-                        <span>{item.email || '-'}</span>
-                        <span>{item.phone || '-'}</span>
+                        {item.email ? (
+                          <span>{item.email}</span>
+                        ) : (
+                          <span className="italic text-zinc-400">No Email</span>
+                        )}
+                        {item.phone ? (
+                          <span>{item.phone}</span>
+                        ) : (
+                          <span className="italic text-zinc-400">No Phone</span>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -196,7 +207,7 @@ export function DashboardTable({
                       className="font-medium h-8"
                       onClick={(e) => {
                         e.stopPropagation(); // Stop row click
-                        handleRetry(item.id);
+                        handleRetryProposalProcess(item.id);
                       }}
                     >
                       Retry <RotateCcw className="ml-1.5 h-4 w-4" />
@@ -212,6 +223,7 @@ export function DashboardTable({
         proposal={selectedProposal}
         open={isSheetOpen}
         onOpenChange={setIsSheetOpen}
+        onUpdate={updateProposalState}
       />
     </div>
   );

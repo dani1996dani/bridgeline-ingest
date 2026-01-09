@@ -1,5 +1,7 @@
-'use client';
-
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useRouter } from 'next/navigation';
 import {
   Sheet,
   SheetContent,
@@ -12,28 +14,84 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { AlertCircle, AlertTriangle, FileText } from 'lucide-react';
+import { AlertCircle, AlertTriangle, FileText, Loader2 } from 'lucide-react';
 import { Proposal } from '@/types/Proposal';
 import { PdfViewer } from '@/components/pdf-viewer';
+import { updateProposal } from '@/actions/update-proposal';
+import { toast } from 'sonner';
+
+const proposalFormSchema = z.object({
+  companyName: z.string().optional(),
+  contactName: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  trade: z.string().optional(),
+});
+
+type ProposalFormValues = z.infer<typeof proposalFormSchema>;
 
 interface ProposalDetailSheetProps {
   proposal: Proposal | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onUpdate?: (id: string, updates: Partial<Proposal>) => void;
 }
 
 export function ProposalDetailSheet({
   proposal,
   open,
   onOpenChange,
+  onUpdate,
 }: ProposalDetailSheetProps) {
+  const router = useRouter();
+  const {
+    register,
+    handleSubmit,
+    formState: { isDirty, isSubmitting, dirtyFields },
+  } = useForm<ProposalFormValues>({
+    resolver: zodResolver(proposalFormSchema),
+    values: {
+      companyName: proposal?.companyName || '',
+      contactName: proposal?.contactName || '',
+      email: proposal?.email || '',
+      phone: proposal?.phone || '',
+      trade: proposal?.trade || '',
+    },
+  });
+
+  const onSubmit = async (data: ProposalFormValues) => {
+    if (!proposal) return;
+
+    // Use dirtyFields to find exactly what changed
+    const updates: Record<string, string> = {};
+    (Object.keys(dirtyFields) as Array<keyof ProposalFormValues>).forEach(
+      (key) => {
+        // If the field is dirty, we include its current value from 'data'
+        if (dirtyFields[key]) {
+          updates[key] = data[key] || '';
+        }
+      }
+    );
+
+    if (Object.keys(updates).length === 0) return;
+
+    const result = await updateProposal(proposal.id, updates);
+
+    if (result.success) {
+      toast.success('Changes saved successfully');
+
+      // Optimistic Update
+      if (onUpdate) {
+        onUpdate(proposal.id, updates);
+      }
+
+      router.refresh();
+      onOpenChange(false);
+    } else {
+      toast.error('Failed to save changes');
+    }
+  };
+
   const getConfidenceStyle = (field: string) => {
     if (!proposal?.fields) return '';
     const confidence = proposal.fields[field]?.confidence;
@@ -112,13 +170,17 @@ export function ProposalDetailSheet({
                 </div>
               )}
 
-              <div className="space-y-4">
+              <form
+                id="extraction-form"
+                onSubmit={handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Company Name</Label>
                   <div className="relative">
                     <Input
                       id="companyName"
-                      defaultValue={proposal.companyName || ''}
+                      {...register('companyName')}
                       className={getConfidenceStyle('companyName')}
                     />
                     {showWarning('companyName') && (
@@ -132,7 +194,7 @@ export function ProposalDetailSheet({
                   <div className="relative">
                     <Input
                       id="contactName"
-                      defaultValue={proposal.contactName || ''}
+                      {...register('contactName')}
                       className={getConfidenceStyle('contactName')}
                     />
                     {showWarning('contactName') && (
@@ -146,7 +208,7 @@ export function ProposalDetailSheet({
                   <div className="relative">
                     <Input
                       id="email"
-                      defaultValue={proposal.email || ''}
+                      {...register('email')}
                       className={getConfidenceStyle('email')}
                     />
                     {showWarning('email') && (
@@ -160,7 +222,7 @@ export function ProposalDetailSheet({
                   <div className="relative">
                     <Input
                       id="phone"
-                      defaultValue={proposal.phone || ''}
+                      {...register('phone')}
                       className={getConfidenceStyle('phone')}
                     />
                     {showWarning('phone') && (
@@ -171,27 +233,31 @@ export function ProposalDetailSheet({
 
                 <div className="space-y-2">
                   <Label htmlFor="trade">Trade</Label>
-                  <Select defaultValue={proposal.trade || undefined}>
-                    <SelectTrigger className={getConfidenceStyle('trade')}>
-                      <SelectValue placeholder="Select a trade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/*todo: add all values to match the prompt to gemini*/}
-                      <SelectItem value="Plumbing">Plumbing</SelectItem>
-                      <SelectItem value="HVAC">HVAC</SelectItem>
-                      <SelectItem value="Electrical">Electrical</SelectItem>
-                      <SelectItem value="Concrete">Concrete</SelectItem>
-                      <SelectItem value="Carpentry">Carpentry</SelectItem>
-                      <SelectItem value="General">General</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="relative">
+                    <Input
+                      id="trade"
+                      {...register('trade')}
+                      className={getConfidenceStyle('trade')}
+                    />
+                    {showWarning('trade') && (
+                      <AlertCircle className="absolute right-3 top-2.5 h-4 w-4 text-amber-500" />
+                    )}
+                  </div>
                 </div>
-              </div>
+              </form>
             </div>
           </ScrollArea>
 
           <SheetFooter className="px-6 py-4 border-t gap-2 sm:justify-between bg-zinc-50/50 dark:bg-zinc-900/50 justify-center items-end flex-col">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white max-w-[200px]">
+            <Button
+              type="submit"
+              form="extraction-form"
+              className="bg-blue-600 hover:bg-blue-700 text-white max-w-[200px]"
+              disabled={!isDirty || isSubmitting}
+            >
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               Confirm & Save
             </Button>
           </SheetFooter>
