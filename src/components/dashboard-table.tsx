@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
-  ChevronRight,
   FileText,
   RotateCcw,
 } from 'lucide-react';
@@ -24,6 +23,10 @@ import { Proposal } from '@/types/Proposal';
 import { useProposalQueue } from '@/hooks/use-proposal-queue';
 import { useState } from 'react';
 import { ProposalDetailSheet } from '@/components/proposal-detail-sheet';
+import { ApprovalActions } from '@/components/approval-actions';
+import { ProposalApprovalStatus } from '@/types/ProposalApprovalStatus';
+import { cn } from '@/lib/utils';
+import { ProposalStatus } from '@/types/ProposalStatus';
 
 export function DashboardTable({
   initialProposals,
@@ -43,10 +46,16 @@ export function DashboardTable({
     (p) => p.status === 'PENDING' || p.status === 'PROCESSING'
   ).length;
   const needsReviewCount = proposals.filter(
-    (p) => p.status === 'COMPLETED' && p.reviewNeeded
+    (p) =>
+      p.status === ProposalStatus.COMPLETED &&
+      p.reviewNeeded &&
+      p.approvalStatus === ProposalApprovalStatus.PENDING
   ).length;
   const readyCount = proposals.filter(
-    (p) => p.status === 'COMPLETED' && !p.reviewNeeded
+    (p) =>
+      p.status === ProposalStatus.COMPLETED &&
+      !p.reviewNeeded &&
+      p.approvalStatus !== ProposalApprovalStatus.REJECTED
   ).length;
 
   return (
@@ -99,7 +108,11 @@ export function DashboardTable({
             {proposals.map((item) => (
               <TableRow
                 key={item.id}
-                className="cursor-pointer hover:bg-zinc-50 transition-colors group"
+                className={cn(
+                  'cursor-pointer hover:bg-zinc-50 transition-colors group',
+                  item.approvalStatus === ProposalApprovalStatus.REJECTED &&
+                    'opacity-50 grayscale'
+                )}
                 onClick={() => {
                   setSelectedProposal(item);
                   setIsSheetOpen(true);
@@ -119,7 +132,7 @@ export function DashboardTable({
 
                 <TableCell className="font-medium text-zinc-900">
                   <div className="space-y-2">
-                    {item.status === 'COMPLETED' ? (
+                    {item.status === ProposalStatus.COMPLETED ? (
                       item.companyName || (
                         <span className="text-muted-foreground italic">
                           Unknown Company
@@ -135,7 +148,7 @@ export function DashboardTable({
                 </TableCell>
 
                 <TableCell>
-                  {item.status === 'COMPLETED' ? (
+                  {item.status === ProposalStatus.COMPLETED ? (
                     item.trade ? (
                       <div className="inline-flex items-center rounded-md border border-zinc-200 px-2.5 py-0.5 text-xs font-semibold text-zinc-700 bg-zinc-50">
                         {item.trade}
@@ -151,7 +164,7 @@ export function DashboardTable({
                 </TableCell>
 
                 <TableCell>
-                  {item.status === 'COMPLETED' ? (
+                  {item.status === ProposalStatus.COMPLETED ? (
                     <div className="flex flex-col gap-0.5">
                       {item.contactName ? (
                         <span className="text-sm font-medium text-zinc-900">
@@ -191,14 +204,11 @@ export function DashboardTable({
                 </TableCell>
 
                 <TableCell className="text-right">
-                  {item.status === 'COMPLETED' ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-zinc-800 hover:text-black hover:bg-zinc-100 font-medium h-8"
-                    >
-                      Review <ChevronRight className="ml-1 h-4 w-4" />
-                    </Button>
+                  {item.status === ProposalStatus.COMPLETED ? (
+                    <ApprovalActions
+                      proposal={item}
+                      onUpdate={updateProposalState}
+                    />
                   ) : null}
                   {item.status === 'FAILED' ? (
                     <Button

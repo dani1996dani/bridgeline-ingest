@@ -2,14 +2,20 @@
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-import { ConfidenceLevel, ExtractionSource } from '@/generated/prisma/client';
+import {
+  ConfidenceLevel,
+  ExtractionSource,
+  ApprovalStatus,
+} from '@/generated/prisma/client';
 
 export async function updateProposal(
   proposalId: string,
-  data: Record<string, string | null>
+  data: Record<string, string | null>,
+  approvalStatus?: ApprovalStatus
 ) {
   try {
     await prisma.$transaction(async (tx) => {
+      // Update fields if provided
       for (const [name, value] of Object.entries(data)) {
         // Upsert the field with user override metadata
         await tx.extractionField.upsert({
@@ -33,6 +39,14 @@ export async function updateProposal(
             source: ExtractionSource.USER,
             reasoning: 'Manual user edit',
           },
+        });
+      }
+
+      // Update approval status if provided
+      if (approvalStatus) {
+        await tx.proposal.update({
+          where: { id: proposalId },
+          data: { approvalStatus },
         });
       }
     });
