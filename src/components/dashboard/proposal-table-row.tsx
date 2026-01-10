@@ -44,7 +44,7 @@ export const ProposalTableRow = ({
       {/* Status Icon */}
       <TableCell>
         {proposal.status === ProposalStatus.PENDING ||
-        ProposalStatus.PROCESSING ? (
+        proposal.status === ProposalStatus.PROCESSING ? (
           <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
         ) : proposal.status === ProposalStatus.FAILED ? (
           <XCircle className="h-5 w-5 text-red-500" />
