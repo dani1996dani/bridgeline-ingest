@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ProposalDetailSheet } from '@/components/proposal-detail-sheet';
+import { ProposalDetailSheet } from '@/components/dashboard/proposal-detail-sheet';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
 import { ProposalTableRow } from '@/components/dashboard/proposal-table-row';
 

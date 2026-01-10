@@ -12,11 +12,16 @@ import { ConfidenceLevel } from '@/types/Confidence';
 import { geminiSchema } from '@/lib/gemini-schema';
 import { EXTRACTION_SYSTEM_PROMPT } from '@/lib/extraction-system-prompt';
 
+const API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.5.flash';
+
+if (!API_KEY) {
+  throw new Error('CRITICAL: Missing GOOGLE_GENERATIVE_AI_API_KEY in .env');
+}
+
 // Init Gemini
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
-const fileManager = new GoogleAIFileManager(
-  process.env.GOOGLE_GENERATIVE_AI_API_KEY!
-);
+const genAI = new GoogleGenerativeAI(API_KEY);
+const fileManager = new GoogleAIFileManager(API_KEY);
 
 export async function processProposal(proposalId: string) {
   // Fetch from DB
@@ -72,8 +77,7 @@ export async function processProposal(proposalId: string) {
 
     // Generate Data
     const model = genAI.getGenerativeModel({
-      //todo: change back to gemini-2.5-flash
-      model: 'gemini-2.5-flash-lite',
+      model: MODEL_NAME,
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: geminiSchema,
