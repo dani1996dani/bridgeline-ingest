@@ -19,7 +19,6 @@ export function DashboardTable({
 }: {
   initialProposals: Proposal[];
 }) {
-  // Logic & State
   const { proposals, handleRetryProposalProcess, updateProposalState } =
     useProposalQueue(initialProposals);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(
