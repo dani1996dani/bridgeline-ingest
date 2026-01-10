@@ -9,8 +9,8 @@ import {
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ConfidenceBadge } from '@/components/confidence-badge';
-import { ApprovalActions } from '@/components/approval-actions';
+import { ConfidenceBadge } from '@/components/dashboard/confidence-badge';
+import { ApprovalActions } from '@/components/dashboard/approval-actions';
 import { Proposal } from '@/types/Proposal';
 import { ProposalStatus } from '@/types/ProposalStatus';
 import { ProposalApprovalStatus } from '@/types/ProposalApprovalStatus';

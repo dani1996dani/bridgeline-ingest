@@ -2,9 +2,15 @@
 
 import { prisma } from '@/lib/db';
 import { ConfidenceLevel } from '@/types/Confidence';
+import { ApprovalStatus } from '@/generated/prisma/client';
 
-export async function getProposals() {
+export async function getProposals(
+  filters: { approvalStatus?: ApprovalStatus } = {}
+) {
   const proposals = await prisma.proposal.findMany({
+    where: {
+      ...filters,
+    },
     take: 100,
     orderBy: { createdAt: 'desc' },
     include: {

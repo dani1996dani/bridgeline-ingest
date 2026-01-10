@@ -19,7 +19,7 @@ import { Proposal } from '@/types/Proposal';
 import { updateProposal } from '@/actions/update-proposal';
 import { toast } from 'sonner';
 import { ConfidenceLevel } from '@/types/Confidence';
-import { ConfidenceAlert } from '@/components/confidence-alert';
+import { ConfidenceAlert } from '@/components/dashboard/confidence-alert';
 import { DocumentPreview } from '@/components/document-preview';
 
 const proposalFormSchema = z.object({
