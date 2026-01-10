@@ -52,16 +52,10 @@ export function InvitationDashboard({ proposals }: InvitationDashboardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 pb-32">
+    <div className="pb-32">
       <div className="container max-w-5xl mx-auto py-10 space-y-8">
         {/* Header */}
         <div className="space-y-1">
-          <Link
-            href="/dashboard"
-            className="text-sm text-zinc-500 hover:text-zinc-900 flex items-center mb-2 w-fit"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back to Dashboard
-          </Link>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
             Invitation to Bid
           </h1>

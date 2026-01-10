@@ -13,7 +13,7 @@ export default async function InvitationPage() {
 
   if (proposals.length === 0) {
     return (
-      <div className="min-h-screen bg-zinc-50/50 flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <div className="text-center">
           <div className="bg-zinc-100 rounded-full p-4 inline-flex mb-4">
             <FileText className="h-8 w-8 text-zinc-400" />
