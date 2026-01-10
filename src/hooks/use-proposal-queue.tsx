@@ -22,9 +22,7 @@ export function useProposalQueue(initialProposals: Proposal[]) {
   const isProcessingRef = useRef(false);
 
   useEffect(() => {
-    if (initialProposals.length > proposals.length) {
-      setProposals(initialProposals);
-    }
+    setProposals(initialProposals);
   }, [initialProposals, proposals.length]);
 
   useEffect(() => {

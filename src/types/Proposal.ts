@@ -1,13 +1,14 @@
-import { ApprovalStatus, ProposalStatus } from '@/generated/prisma/client';
+import { ProposalStatus } from '@/generated/prisma/client';
 import { ExtractionField } from './ExtractionField';
 import { ConfidenceLevel } from './Confidence';
+import { ProposalApprovalStatus } from './ProposalApprovalStatus';
 
 export interface Proposal {
   id: string;
   fileName: string;
   fileUrl: string | null;
   status: ProposalStatus;
-  approvalStatus: ApprovalStatus;
+  approvalStatus: ProposalApprovalStatus;
   createdAt: Date | string;
   updatedAt?: Date | string;
 
