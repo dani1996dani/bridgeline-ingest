@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  if (proposal.status === 'COMPLETED')
+  if (proposal.status === ProposalStatus.COMPLETED)
     return NextResponse.json({ success: true });
 
   // Set Processing
