@@ -5,12 +5,7 @@ import { supabase } from '@/lib/supabase';
 import crypto from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { ProposalStatus } from '@/generated/prisma/enums';
-
-const ALLOWED_TYPES = new Set([
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-excel',
-]);
+import { SUPPORTED_FILE_TYPE_MAP } from '@/lib/supportedFileTypes';
 
 export async function uploadProposals(formData: FormData) {
   const files = formData.getAll('files') as File[];
@@ -23,7 +18,7 @@ export async function uploadProposals(formData: FormData) {
   const proposalsToInsert = [];
 
   for (const file of files) {
-    if (!ALLOWED_TYPES.has(file.type)) {
+    if (!SUPPORTED_FILE_TYPE_MAP[file.type]) {
       results.push({
         fileName: file.name,
         status: 'FAILED',

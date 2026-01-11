@@ -7,14 +7,9 @@ import { Upload, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import { SUPPORTED_MIME_TYPES } from '@/lib/supportedFileTypes';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-const ALLOWED_TYPES = [
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-excel',
-];
 
 export function UploadZone() {
   const router = useRouter();
@@ -28,7 +23,7 @@ export function UploadZone() {
         toast.error(`File too large: ${file.name} (Max 10MB)`);
         return false;
       }
-      if (!ALLOWED_TYPES.includes(file.type)) {
+      if (!SUPPORTED_MIME_TYPES.includes(file.type)) {
         toast.error(`Unsupported file type: ${file.name}`);
         return false;
       }
