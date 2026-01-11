@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { processProposal } from '@/actions/process';
 import pLimit from 'p-limit';
 import { Proposal } from '@/types/Proposal';
 import { retryProposal } from '@/actions/retry';
@@ -44,7 +43,13 @@ export function useProposalQueue(initialProposals: Proposal[]) {
           );
 
           try {
-            const result = await processProposal(item.id);
+            const res = await fetch('/api/processProposal', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ proposalId: item.id }),
+            });
+
+            const result = await res.json();
 
             if (result.success && result.data) {
               const data = result.data;

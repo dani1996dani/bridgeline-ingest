@@ -1,5 +1,3 @@
-'use server';
-
 import { prisma } from '@/lib/db';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleAIFileManager } from '@google/generative-ai/server';
@@ -11,6 +9,7 @@ import { ProposalStatus } from '@/generated/prisma/client';
 import { ConfidenceLevel } from '@/types/Confidence';
 import { geminiSchema } from '@/lib/gemini-schema';
 import { EXTRACTION_SYSTEM_PROMPT } from '@/lib/extraction-system-prompt';
+import { NextRequest, NextResponse } from 'next/server';
 
 const API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.5.flash';
@@ -23,21 +22,28 @@ if (!API_KEY) {
 const genAI = new GoogleGenerativeAI(API_KEY);
 const fileManager = new GoogleAIFileManager(API_KEY);
 
-export async function processProposal(proposalId: string) {
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const proposalId: string = body.proposalId;
+
   // Fetch from DB
   const proposal = await prisma.proposal.findUnique({
     where: { id: proposalId },
   });
 
   if (!proposal) {
-    return { success: false, error: 'Proposal not found' };
+    return NextResponse.json({ success: false, error: 'Proposal not found' });
   }
 
   if (!proposal.fileUrl) {
-    return { success: false, error: 'File URL missing in database' };
+    return NextResponse.json({
+      success: false,
+      error: 'File URL missing in database',
+    });
   }
 
-  if (proposal.status === 'COMPLETED') return { success: true };
+  if (proposal.status === ProposalStatus.COMPLETED)
+    return NextResponse.json({ success: true });
 
   // Set Processing
   await prisma.proposal.update({
@@ -86,9 +92,7 @@ export async function processProposal(proposalId: string) {
 
     const result = await model.generateContent([
       { fileData: { mimeType: googleFile.mimeType, fileUri: googleFile.uri } },
-      {
-        text: EXTRACTION_SYSTEM_PROMPT,
-      },
+      { text: EXTRACTION_SYSTEM_PROMPT },
     ]);
 
     const jsonText = result.response.text();
@@ -99,15 +103,12 @@ export async function processProposal(proposalId: string) {
     await fileManager.deleteFile(googleFile.name);
 
     // Calculate Confidence & Review Status
-    // We do this here so the Frontend just renders the result
     const fieldList = [companyName, contactName, email, phone, trade];
 
     let overallConfidence = ConfidenceLevel.HIGH;
     let reviewNeeded = false;
 
-    // Check if ANY field is LOW
     const hasLow = fieldList.some((f) => f?.confidence === ConfidenceLevel.LOW);
-    // Check if ANY field is MEDIUM
     const hasMedium = fieldList.some(
       (f) => f?.confidence === ConfidenceLevel.MEDIUM
     );
@@ -150,15 +151,12 @@ export async function processProposal(proposalId: string) {
       // Update Proposal
       await tx.proposal.update({
         where: { id: proposalId },
-        data: {
-          status: ProposalStatus.COMPLETED,
-        },
+        data: { status: ProposalStatus.COMPLETED },
       });
     });
 
     revalidatePath('/dashboard');
 
-    // Construct the fields map for the UI
     const fields = Object.entries(fieldMap).reduce(
       (acc, [name, data]) => {
         acc[name] = {
@@ -170,16 +168,11 @@ export async function processProposal(proposalId: string) {
       },
       {} as Record<
         string,
-        {
-          value: string | null;
-          confidence: ConfidenceLevel;
-          reasoning: string;
-        }
+        { value: string | null; confidence: ConfidenceLevel; reasoning: string }
       >
     );
 
-    // Return Flattened Data for UI
-    return {
+    return NextResponse.json({
       success: true,
       data: {
         companyName: companyName?.value,
@@ -191,16 +184,15 @@ export async function processProposal(proposalId: string) {
         overallConfidence,
         fields,
       },
-    };
+    });
   } catch (error) {
     console.error('Extraction Process Error:', error);
     await prisma.proposal.update({
       where: { id: proposalId },
       data: { status: ProposalStatus.FAILED },
     });
-    return { success: false, error: 'AI Processing Failed' };
+    return NextResponse.json({ success: false, error: 'AI Processing Failed' });
   } finally {
-    // Clean up local temp file
     if (tempPath) {
       try {
         await fs.unlink(tempPath);
