@@ -10,6 +10,12 @@ import { useRouter } from 'next/navigation';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+const ALLOWED_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+];
+
 export function UploadZone() {
   const router = useRouter();
   const [isDragging, setIsDragging] = useState(false);
@@ -20,6 +26,10 @@ export function UploadZone() {
     const validFiles = files.filter((file) => {
       if (file.size > MAX_FILE_SIZE) {
         toast.error(`File too large: ${file.name} (Max 10MB)`);
+        return false;
+      }
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        toast.error(`Unsupported file type: ${file.name}`);
         return false;
       }
       return true;
@@ -102,7 +112,7 @@ export function UploadZone() {
         id="file-upload"
         type="file"
         multiple
-        accept=".pdf,.xlsx,.xls,.csv,.txt"
+        accept=".pdf,.xlsx,.xls"
         className="hidden"
         onChange={handleFileSelect}
       />
