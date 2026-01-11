@@ -87,8 +87,7 @@ export async function POST(req: NextRequest) {
       for (const [name, data] of Object.entries(fieldMap)) {
         const fieldData = {
           value: data?.value ?? null,
-          confidence:
-            data?.confidence || (ConfidenceLevel.LOW as ConfidenceLevel),
+          confidence: data?.confidence || ConfidenceLevel.LOW,
           reasoning: data?.reasoning || '',
         };
 
