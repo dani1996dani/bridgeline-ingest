@@ -9,7 +9,7 @@ export default async function DashboardPage() {
 
   if (proposals.length === 0) {
     return (
-      <div className="flex items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <div className="bg-zinc-100 rounded-full p-4 inline-flex mb-4">
             <UploadCloud className="h-8 w-8 text-zinc-400" />
