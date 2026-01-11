@@ -11,7 +11,8 @@ export async function uploadProposals(formData: FormData) {
 
   if (!files.length) throw new Error('No files provided');
 
-  const results = [];
+  let results = [];
+  const proposalsToInsert = [];
 
   for (const file of files) {
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -46,19 +47,38 @@ export async function uploadProposals(formData: FormData) {
       data: { publicUrl },
     } = supabase.storage.from('proposals').getPublicUrl(path);
 
-    // Create DB Record
-    const proposal = await prisma.proposal.create({
-      data: {
-        hash,
-        fileName: file.name,
-        fileUrl: publicUrl,
-        status: ProposalStatus.PENDING,
-      },
+    proposalsToInsert.push({
+      hash,
+      fileName: file.name,
+      fileUrl: publicUrl,
+      status: ProposalStatus.PENDING,
     });
-
-    results.push({ fileName: file.name, status: 'SUCCESS', id: proposal.id });
   }
 
+  // Create DB Record
+  const proposals = await prisma.proposal.createMany({
+    data: proposalsToInsert,
+  });
+
+  if (proposals.count === 0) {
+    return { success: false, error: 'Failed to upload proposals.' };
+  }
+
+  const fetchedProposals = await prisma.proposal.findMany({
+    where: { hash: { in: proposalsToInsert.map((x) => x.hash) } },
+    select: { id: true, hash: true, fileName: true },
+  });
+
+  const proposalsToReturn = fetchedProposals.map(({ id, fileName }) => {
+    return {
+      id,
+      fileName,
+      status: 'SUCCESS',
+    };
+  });
+
+  results = [...results, ...proposalsToReturn];
+
   revalidatePath('/dashboard');
-  return { success: true, results };
+  return { success: true, results: results };
 }

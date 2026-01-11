@@ -44,7 +44,7 @@ export function UploadZone() {
 
       // Handle the result
       if (result.success) {
-        const fileCount = result.results.length;
+        const fileCount = result.results?.length || 0;
         toast.success(
           `Uploaded ${fileCount} ${fileCount > 1 ? 'files' : 'file'}`,
           {
