@@ -1,26 +1,11 @@
 import { prisma } from '@/lib/db';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GoogleAIFileManager } from '@google/generative-ai/server';
 import { revalidatePath } from 'next/cache';
-import fs from 'fs/promises';
-import os from 'os';
-import path from 'path';
-import { ProposalStatus } from '@/generated/prisma/client';
-import { ConfidenceLevel } from '@/types/Confidence';
-import { geminiSchema } from '@/lib/gemini-schema';
-import { EXTRACTION_SYSTEM_PROMPT } from '@/lib/extraction-system-prompt';
+import { ConfidenceLevel, ProposalStatus } from '@/generated/prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
-
-const API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.5.flash';
-
-if (!API_KEY) {
-  throw new Error('CRITICAL: Missing GOOGLE_GENERATIVE_AI_API_KEY in .env');
-}
-
-// Init Gemini
-const genAI = new GoogleGenerativeAI(API_KEY);
-const fileManager = new GoogleAIFileManager(API_KEY);
+import { processPdf } from '@/app/api/processProposal/fileProcessors/processPdf';
+import { processExcel } from '@/app/api/processProposal/fileProcessors/processExcel';
+import { resolveFileType } from '@/lib/resolveFileType';
+import { FileType } from '@/types/FileType';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -51,61 +36,35 @@ export async function POST(req: NextRequest) {
     data: { status: ProposalStatus.PROCESSING },
   });
 
-  let tempPath = '';
-  let googleFile = null;
-
   try {
     // Download from Supabase to Temp File
     const response = await fetch(proposal.fileUrl);
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    tempPath = path.join(os.tmpdir(), `${proposal.hash}.pdf`);
-    await fs.writeFile(tempPath, buffer);
+    const fileType = resolveFileType(proposal.fileName, proposal.mimeType);
 
-    // Upload to Google
-    const uploadResult = await fileManager.uploadFile(tempPath, {
-      mimeType: 'application/pdf',
-      displayName: proposal.fileName,
-    });
-    googleFile = uploadResult.file;
+    let aiData;
 
-    // Wait for file to be active on Google's side
-    let fileState = await fileManager.getFile(googleFile.name);
-    while (fileState.state === 'PROCESSING') {
-      await new Promise((r) => setTimeout(r, 1000));
-      fileState = await fileManager.getFile(googleFile.name);
+    switch (fileType) {
+      case FileType.PDF:
+        aiData = await processPdf(buffer, proposal.fileName, proposal.hash);
+        break;
+
+      case FileType.EXCEL:
+        aiData = await processExcel(buffer);
+        break;
+
+      default:
+        throw new Error('Unsupported file type');
     }
 
-    if (fileState.state === 'FAILED') {
-      throw new Error('Google File Processing Failed');
-    }
-
-    // Generate Data
-    const model = genAI.getGenerativeModel({
-      model: MODEL_NAME,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: geminiSchema,
-      },
-    });
-
-    const result = await model.generateContent([
-      { fileData: { mimeType: googleFile.mimeType, fileUri: googleFile.uri } },
-      { text: EXTRACTION_SYSTEM_PROMPT },
-    ]);
-
-    const jsonText = result.response.text();
-    const aiData = JSON.parse(jsonText);
     const { companyName, contactName, email, phone, trade } = aiData;
-
-    // Cleanup Google File
-    await fileManager.deleteFile(googleFile.name);
 
     // Calculate Confidence & Review Status
     const fieldList = [companyName, contactName, email, phone, trade];
 
-    let overallConfidence = ConfidenceLevel.HIGH;
+    let overallConfidence: ConfidenceLevel = ConfidenceLevel.HIGH;
     let reviewNeeded = false;
 
     const hasLow = fieldList.some((f) => f?.confidence === ConfidenceLevel.LOW);
@@ -192,11 +151,5 @@ export async function POST(req: NextRequest) {
       data: { status: ProposalStatus.FAILED },
     });
     return NextResponse.json({ success: false, error: 'AI Processing Failed' });
-  } finally {
-    if (tempPath) {
-      try {
-        await fs.unlink(tempPath);
-      } catch {}
-    }
   }
 }
