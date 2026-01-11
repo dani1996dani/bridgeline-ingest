@@ -48,23 +48,24 @@ export function useProposalQueue(initialProposals: Proposal[]) {
             console.log(
               `FRONTEND [START] ${item.id} at ${new Date().toISOString()}`
             );
-            const result = await processProposal(item.id);
+            await processProposal(item.id);
+            // const result =
 
-            if (result.success && result.data) {
-              const data = result.data;
-
-              setProposals((prev) =>
-                prev.map((p) =>
-                  p.id === item.id
-                    ? {
-                        ...p,
-                        ...data,
-                        status: 'COMPLETED',
-                      }
-                    : p
-                )
-              );
-            }
+            // if (result.success && result.data) {
+            //   const data = result.data;
+            //
+            //   setProposals((prev) =>
+            //     prev.map((p) =>
+            //       p.id === item.id
+            //         ? {
+            //             ...p,
+            //             ...data,
+            //             status: 'COMPLETED',
+            //           }
+            //         : p
+            //     )
+            //   );
+            // }
           } catch (e) {
             console.error(e);
             setProposals((prev) =>
