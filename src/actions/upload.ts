@@ -6,15 +6,31 @@ import crypto from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { ProposalStatus } from '@/generated/prisma/enums';
 
+const ALLOWED_TYPES = new Set([
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+]);
+
 export async function uploadProposals(formData: FormData) {
   const files = formData.getAll('files') as File[];
 
-  if (!files.length) throw new Error('No files provided');
+  if (!files.length) {
+    return { success: false, error: 'No files provided', results: [] };
+  }
 
   let results = [];
   const proposalsToInsert = [];
 
   for (const file of files) {
+    if (!ALLOWED_TYPES.has(file.type)) {
+      results.push({
+        fileName: file.name,
+        status: 'FAILED',
+        reason: 'UNSUPPORTED_FILE_TYPE',
+      });
+      continue;
+    }
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // Deduplication using sha256 hash
@@ -50,34 +66,38 @@ export async function uploadProposals(formData: FormData) {
     proposalsToInsert.push({
       hash,
       fileName: file.name,
+      // adding fallback because not all browsers send the mimetype
+      mimeType: file.type || 'application/octet-stream',
       fileUrl: publicUrl,
       status: ProposalStatus.PENDING,
     });
   }
 
   // Create DB Record
-  const proposals = await prisma.proposal.createMany({
-    data: proposalsToInsert,
-  });
+  if (proposalsToInsert.length > 0) {
+    const proposals = await prisma.proposal.createMany({
+      data: proposalsToInsert,
+    });
 
-  if (proposals.count === 0) {
-    return { success: false, error: 'Failed to upload proposals.' };
+    if (proposals.count === 0) {
+      return { success: false, error: 'Failed to upload proposals.' };
+    }
+
+    const fetchedProposals = await prisma.proposal.findMany({
+      where: { hash: { in: proposalsToInsert.map((x) => x.hash) } },
+      select: { id: true, hash: true, fileName: true },
+    });
+
+    const proposalsToReturn = fetchedProposals.map(({ id, fileName }) => {
+      return {
+        id,
+        fileName,
+        status: 'SUCCESS',
+      };
+    });
+
+    results = [...results, ...proposalsToReturn];
   }
-
-  const fetchedProposals = await prisma.proposal.findMany({
-    where: { hash: { in: proposalsToInsert.map((x) => x.hash) } },
-    select: { id: true, hash: true, fileName: true },
-  });
-
-  const proposalsToReturn = fetchedProposals.map(({ id, fileName }) => {
-    return {
-      id,
-      fileName,
-      status: 'SUCCESS',
-    };
-  });
-
-  results = [...results, ...proposalsToReturn];
 
   revalidatePath('/dashboard');
   return { success: true, results: results };
