@@ -44,6 +44,10 @@ export function useProposalQueue(initialProposals: Proposal[]) {
           );
 
           try {
+            console.log('debugz processProposal');
+            console.log(
+              `FRONTEND [START] ${item.id} at ${new Date().toISOString()}`
+            );
             const result = await processProposal(item.id);
 
             if (result.success && result.data) {
