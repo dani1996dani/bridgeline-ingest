@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { processProposal } from '@/actions/process';
 import pLimit from 'p-limit';
 import { Proposal } from '@/types/Proposal';
 import { retryProposal } from '@/actions/retry';
@@ -44,28 +43,29 @@ export function useProposalQueue(initialProposals: Proposal[]) {
           );
 
           try {
-            console.log('debugz processProposal');
-            console.log(
-              `FRONTEND [START] ${item.id} at ${new Date().toISOString()}`
-            );
-            await processProposal(item.id);
-            // const result =
+            const res = await fetch('/api/processProposal', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ proposalId: item.id }),
+            });
 
-            // if (result.success && result.data) {
-            //   const data = result.data;
-            //
-            //   setProposals((prev) =>
-            //     prev.map((p) =>
-            //       p.id === item.id
-            //         ? {
-            //             ...p,
-            //             ...data,
-            //             status: 'COMPLETED',
-            //           }
-            //         : p
-            //     )
-            //   );
-            // }
+            const result = await res.json();
+
+            if (result.success && result.data) {
+              const data = result.data;
+
+              setProposals((prev) =>
+                prev.map((p) =>
+                  p.id === item.id
+                    ? {
+                        ...p,
+                        ...data,
+                        status: 'COMPLETED',
+                      }
+                    : p
+                )
+              );
+            }
           } catch (e) {
             console.error(e);
             setProposals((prev) =>
