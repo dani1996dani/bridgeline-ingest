@@ -12,7 +12,7 @@ export async function getProposals(
       ...filters,
     },
     take: 100,
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: {
       fields: true,
     },
