@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Proposal Ingestion Engine (Bridgeline Technical Exercise)
 
-## Getting Started
+An extraction engine for construction subcontractor proposals. Built to handle messy, unstructured PDFs and spreadsheets with transparency and human-in-the-loop verification.
 
-First, run the development server:
+**Live Demo:** [INSERT VERCEL LINK]
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+**Video Walkthrough:** [INSERT LOOM LINK]
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Architecture & Key Decisions
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Layout-Aware Extraction (Gemini 2.5 Flash)
 
-## Learn More
+- **The Problem:** Construction proposals depend heavily on spatial layout (headers, footers, tables) to associate contact and trade info. Standard text parsers flatten this, causing data to get mixed up.
+- **The Solution:** I used **Gemini 2.5 Flash** for its native multimodal capabilities. It "sees" the document layout, ensuring higher accuracy for contact details than a simple text parser could.
+- **Trade-off:** It is slightly slower than simple text parsing, but for an ingestion pipeline where accuracy is critical, the trade-off is worth it.
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Strategy Pattern For Extensible File Processing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To handle the requirement for mixed file types (PDF vs. Excel), I implemented a Strategy Pattern in the backend.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **PDFs:** Processed visually via Gemini's native PDF support.
+- **Excel:** Converted to structured text context before being fed to the LLM.
+- **Extensibility:** This architecture allows us to easily add support for `.docx` or emails in the future by adding a new processor module, without touching the core extraction logic.
 
-## Deploy on Vercel
+### 3. Normalized EAV Data Model
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+I avoided storing data as JSON blobs. Instead, I normalized the data into an `ExtractionField` table (Entity-Attribute-Value pattern).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Source of Truth:** It tracks the `source` of every field (`AI` vs `USER`).
+- **Confidence:** The system stores the AI's confidence score and reasoning for every individual field.
+- **Benefit:** This creates the foundation for auditability—we know exactly which fields were auto-extracted vs. which were manually corrected by a user.
+
+### 4. Client-Side Orchestration (The Queue)
+
+To handle bulk uploads within Vercel's Serverless timeout limits without prematurely introducing a full message queue (RabbitMQ/SQS) for this exercise, the frontend acts as the orchestrator.
+
+- **Ingest:** The frontend sends files to a bulk upload Server Action, which handles deduplication and upload to Supabase File Storage.
+- **The Problem:** Triggering 50+ parallel LLM requests immediately would trigger "429 - Too Many Requests" errors and hit Vercel's execution timeouts.
+- **The Solution:** Once files are stored, the frontend triggers the AI extraction via the API in a concurrency-limited queue (3 items at a time).
+- **Why:** This ensures the system scales to hundreds of files without choking the API or timing out, while providing real-time progress feedback to the user.
+
+### 5. Deduplication (SHA-256)
+
+I implemented content-based deduplication using SHA-256 hashing.
+
+- **Mechanism:** Before processing, the system hashes the file. If the hash exists in the DB, it flags it as a duplicate immediately.
+- **Benefit:** Prevents billing for redundant AI processing and keeps the dashboard clean.
+
+---
+
+## Production Readiness
+
+If we were moving this to production, here is how I would harden the system:
+
+1.  **True Async Job Queue:**
+    The client-side orchestration is a robust pattern for a Serverless MVP. In production, I would move this to a persistent server-side queue (e.g., **RabbitMQ** or **SQS**) to decouple processing from the browser session.
+
+2.  **Security & Signed URLs:**
+    Currently, files are stored in a public bucket for ease of access during the review. In production, files would be in a private bucket, accessed only via short-lived Signed URLs generated by the server.
+
+3.  **Data Validation & Normalization:**
+    - **Validation:** Add stricter Zod schemas to the User Edit Form (e.g., enforcing valid email and phone number formats).
+    - **Closed list of Trades:** Currently, trades are free-text. I would add a closed list of trades and force the LLM to map the result to an entry from that list.
+
+4.  **Audit History:**
+    The current model allows overwriting AI data with User data. To keep a full log, I would implement an Extraction history table to preserve the original AI values alongside the user overrides (Append-Only log).
+5.  **Direct-to-Storage Uploads (Presigned URLs):**
+    Currently, all files are sent to the backend in a single request. While simple to implement, this approach is brittle—a batch of large files would hit server payload limits or timeouts.
+    **The Production Fix:** I would implement Client-Side Hashing to check for duplicates first, and then use **Presigned URLs** to upload only new files directly to Supabase Storage from the browser, bypassing the application server bottleneck entirely.
+
+---
+
+## Tech Stack
+
+- **Framework:** Next.js (App Router / Server Actions)
+- **Database:** Supabase (Postgres) + Prisma ORM
+- **AI Model:** Google Gemini 2.5 Flash
+- **File Storage:** Supabase Storage
+- **UI:** Tailwind CSS + Shadcn/UI + React Hook Form
+
+---
+
+## 🚀 Local Setup
+
+**Ensure you are using `node v22` or higher.**
+
+1.  Clone the repo.
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Set up Environment:
+    - Copy `.env.example` to `.env`
+    - Add your Supabase URL/Keys and Google Gemini API Key.
+4.  Push Database Schema:
+    ```bash
+    npx prisma generate && npx prisma db push
+    ```
+5.  Run:
+    ```bash
+    npm run dev
+    ```

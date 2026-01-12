@@ -189,6 +189,7 @@ const ExtractionField = ({
 }: {
   label: string;
   id: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   registerProps: any;
   confidence?: ConfidenceLevel;
 }) => {
