@@ -21,6 +21,7 @@ export function useProposalQueue(initialProposals: Proposal[]) {
   const isProcessingRef = useRef(false);
 
   useEffect(() => {
+    // eslint-disable-next-line
     setProposals(initialProposals);
   }, [initialProposals, proposals.length]);
 
