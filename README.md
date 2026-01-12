@@ -2,9 +2,9 @@
 
 An extraction engine for construction subcontractor proposals. Built to handle messy, unstructured PDFs and spreadsheets with transparency and human-in-the-loop verification.
 
-**Live Demo:** [INSERT VERCEL LINK]
+**Live Demo:** https://bridgeline-ingest.vercel.app/
 
-**Video Walkthrough:** [INSERT LOOM LINK]
+**Video Walkthrough:** https://www.youtube.com/watch?v=_YKPF5SBq6Q
 
 ---
 
@@ -82,7 +82,7 @@ If we were moving this to production, here is how I would harden the system:
 
 ---
 
-## 🚀 Local Setup
+## Local Setup
 
 **Ensure you are using `node v22` or higher.**
 
